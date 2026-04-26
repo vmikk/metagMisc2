@@ -64,3 +64,32 @@ static double dist_bray(const std::vector<int>& i1, const std::vector<double>& v
   }
   return 1.0 - 2.0 * smin / den;
 }
+
+static double dist_euclidean(const std::vector<int>& i1, const std::vector<double>& v1,
+                             const std::vector<int>& i2, const std::vector<double>& v2) {
+  double s = 0.0;
+  size_t a = 0, b = 0;
+  while (a < i1.size() && b < i2.size()) {
+    if (i1[a] == i2[b]) {
+      const double d = v1[a] - v2[b];
+      s += d * d;
+      ++a;
+      ++b;
+    } else if (i1[a] < i2[b]) {
+      s += v1[a] * v1[a];
+      ++a;
+    } else {
+      s += v2[b] * v2[b];
+      ++b;
+    }
+  }
+  while (a < i1.size()) {
+    s += v1[a] * v1[a];
+    ++a;
+  }
+  while (b < i2.size()) {
+    s += v2[b] * v2[b];
+    ++b;
+  }
+  return std::sqrt(s);
+}
