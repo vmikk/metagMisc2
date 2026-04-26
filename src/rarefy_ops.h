@@ -47,3 +47,13 @@ inline void prepare_col(RcppSparse::Matrix& A, int col, PreparedColumn& out) {
     out.total += c;
   }
 }
+
+inline void copy_prepared_column(const PreparedColumn& src, std::vector<int>& idx,
+                                 std::vector<double>& cnt) {
+  idx = src.row;
+  cnt.resize(src.count.size());
+  for (size_t t = 0; t < src.count.size(); ++t) {
+    cnt[t] = static_cast<double>(src.count[t]);
+  }
+}
+
