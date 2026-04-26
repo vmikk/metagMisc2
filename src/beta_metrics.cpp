@@ -93,3 +93,26 @@ static double dist_euclidean(const std::vector<int>& i1, const std::vector<doubl
   }
   return std::sqrt(s);
 }
+
+static double dist_hellinger(const std::vector<int>& i1, std::vector<double> v1,
+                             const std::vector<int>& i2, std::vector<double> v2) {
+  double s1 = 0, s2 = 0;
+  for (double x : v1) {
+    s1 += x;
+  }
+  for (double x : v2) {
+    s2 += x;
+  }
+  if (s1 <= 0.0 || s2 <= 0.0) {
+    return NA_REAL;
+  }
+  const double is1 = 1.0 / s1;
+  const double is2 = 1.0 / s2;
+  for (double& x : v1) {
+    x = std::sqrt(x * is1);
+  }
+  for (double& x : v2) {
+    x = std::sqrt(x * is2);
+  }
+  return dist_euclidean(i1, v1, i2, v2);
+}
