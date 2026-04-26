@@ -32,3 +32,35 @@ static void to_pa_inplace(std::vector<double>& v) {
     }
   }
 }
+
+static double dist_bray(const std::vector<int>& i1, const std::vector<double>& v1,
+                        const std::vector<int>& i2, const std::vector<double>& v2) {
+  double sum1 = 0, sum2 = 0, smin = 0;
+  size_t a = 0, b = 0;
+  while (a < i1.size() && b < i2.size()) {
+    if (i1[a] == i2[b]) {
+      smin += std::min(v1[a], v2[b]);
+      sum1 += v1[a];
+      sum2 += v2[b];
+      ++a;
+      ++b;
+    } else if (i1[a] < i2[b]) {
+      sum1 += v1[a];
+      ++a;
+    } else {
+      sum2 += v2[b];
+      ++b;
+    }
+  }
+  while (a < i1.size()) {
+    sum1 += v1[a++];
+  }
+  while (b < i2.size()) {
+    sum2 += v2[b++];
+  }
+  const double den = sum1 + sum2;
+  if (den <= 0.0) {
+    return NA_REAL;
+  }
+  return 1.0 - 2.0 * smin / den;
+}
