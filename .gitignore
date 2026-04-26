@@ -42,6 +42,11 @@ vignettes/*.pdf
 # pkgdown site
 docs/
 
+# compiled c++ files
+src/*.o
+src/*.so
+src/*.dll
+
 # translation temp files
 po/*~
 
