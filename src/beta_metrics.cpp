@@ -116,3 +116,36 @@ static double dist_hellinger(const std::vector<int>& i1, std::vector<double> v1,
   }
   return dist_euclidean(i1, v1, i2, v2);
 }
+
+static double dist_simpson(const std::vector<int>& i1, const std::vector<double>& v1,
+                           const std::vector<int>& i2, const std::vector<double>& v2) {
+  double s1 = 0, s2 = 0;
+  for (double x : v1) {
+    s1 += x;
+  }
+  for (double x : v2) {
+    s2 += x;
+  }
+  if (s1 <= 0.0 || s2 <= 0.0) {
+    return NA_REAL;
+  }
+  double uij = 0, uji = 0;
+  size_t a = 0, b = 0;
+  while (a < i1.size() && b < i2.size()) {
+    if (i1[a] == i2[b]) {
+      uij += v1[a] / s1;
+      uji += v2[b] / s2;
+      ++a;
+      ++b;
+    } else if (i1[a] < i2[b]) {
+      ++a;
+    } else {
+      ++b;
+    }
+  }
+  const double uv = uij * uji;
+  const double u_diff = uij - uv;
+  const double v_diff = uji - uv;
+  const double eps = 1e-17;
+  return 1.0 - uv / (uv + std::min(u_diff, v_diff) + eps);
+}
