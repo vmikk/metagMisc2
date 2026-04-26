@@ -394,3 +394,30 @@ public:
   }
 };
 }  // namespace RcppSparse
+
+namespace Rcpp {
+namespace traits {
+
+template <>
+class Exporter<RcppSparse::Matrix> {
+  Rcpp::NumericVector x_;
+  Rcpp::IntegerVector i, p, Dim;
+  
+public:
+  Exporter(SEXP x) {
+    Rcpp::S4 s(x);
+    if (!s.hasSlot("x") || !s.hasSlot("p") || !s.hasSlot("i") || !s.hasSlot("Dim"))
+      throw std::invalid_argument("Cannot construct RcppSparse::Matrix from this S4 object");
+    x_ = s.slot("x");
+    i = s.slot("i");
+    p = s.slot("p");
+    Dim = s.slot("Dim");
+  }
+  
+  RcppSparse::Matrix get() {
+    return RcppSparse::Matrix(x_, i, p, Dim);
+  }
+};
+
+}  // namespace traits
+}  // namespace Rcpp
