@@ -1,9 +1,11 @@
 Package: metagMisc2
 Type: Package
+Title: Fast multiple rarefaction for sparse metabarcoding data
 Version: 0.1.0
 Authors@R: c(person("Vladimir", "Mikryukov", role = c("aut", "cre"), email = "vladimir.mikryukov@ut.ee"))
 Author: Vladimir Mikryukov [aut, cre]
 Maintainer: Vladimir Mikryukov <vladimir.mikryukov@ut.ee>
+Description: Multi-iteration rarefaction with alpha and beta diversity estimation
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.4.0)
