@@ -87,3 +87,46 @@ inline void rarefy_col_hyper(const PreparedColumn& src, int target_depth, std::v
   }
 }
 
+inline void rarefy_col_hyper(RcppSparse::Matrix& A, int col, int target_depth, int64_t total,
+                             std::vector<int>& idx, std::vector<double>& cnt,
+                             std::mt19937_64& rng) {
+  idx.clear();
+  cnt.clear();
+  if (target_depth <= 0 || target_depth > total) {
+    return;
+  }
+
+  int* Ap = A.outerIndexPtr().begin();
+  int* Ai = A.innerIndexPtr().begin();
+  double* Ax = A.nonzeros().begin();
+  const int p0 = Ap[col];
+  const int p1 = Ap[col + 1];
+
+  if (target_depth == total) {
+    for (int t = p0; t < p1; ++t) {
+      const double v = std::round(Ax[t]);
+      if (v > 0) {
+        idx.push_back(Ai[t]);
+        cnt.push_back(v);
+      }
+    }
+    return;
+  }
+
+  int remaining = target_depth;
+  int64_t remaining_N = total;
+  for (int t = p0; t < p1 && remaining > 0; ++t) {
+    const int64_t c = static_cast<int64_t>(std::llround(Ax[t]));
+    if (c <= 0) {
+      continue;
+    }
+    const int drawn = rhyper_mt(rng, remaining_N, c, remaining);
+    if (drawn > 0) {
+      idx.push_back(Ai[t]);
+      cnt.push_back(static_cast<double>(drawn));
+    }
+    remaining -= drawn;
+    remaining_N -= c;
+  }
+}
+
