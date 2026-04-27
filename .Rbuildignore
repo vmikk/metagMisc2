@@ -1,0 +1,6 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.positai$
+^extra$
+^tests_extra$
+^TODO$
