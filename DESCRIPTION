@@ -1,0 +1,14 @@
+Package: metagMisc2
+Type: Package
+Version: 0.1.0
+Authors@R: c(person("Vladimir", "Mikryukov", role = c("aut", "cre"), email = "vladimir.mikryukov@ut.ee"))
+Author: Vladimir Mikryukov [aut, cre]
+Maintainer: Vladimir Mikryukov <vladimir.mikryukov@ut.ee>
+License: MIT
+Encoding: UTF-8
+Depends: R (>= 4.4.0)
+Imports:
+    Matrix,
+    Rcpp,
+    methods
+LinkingTo: Rcpp
