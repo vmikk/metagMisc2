@@ -57,3 +57,33 @@ inline void copy_prepared_column(const PreparedColumn& src, std::vector<int>& id
   }
 }
 
+inline void rarefy_col_hyper(const PreparedColumn& src, int target_depth, std::vector<int>& idx,
+                             std::vector<double>& cnt, std::mt19937_64& rng) {
+  idx.clear();
+  cnt.clear();
+  if (target_depth <= 0 || target_depth > src.total) {
+    return;
+  }
+  if (target_depth == src.total) {
+    copy_prepared_column(src, idx, cnt);
+    return;
+  }
+
+  int remaining = target_depth;
+  int64_t remaining_N = src.total;
+  for (size_t t = 0; t < src.count.size() && remaining > 0; ++t) {
+    const int row = src.row[t];
+    const int64_t c = src.count[t];
+    if (c <= 0) {
+      continue;
+    }
+    const int drawn = rhyper_mt(rng, remaining_N, c, remaining);
+    if (drawn > 0) {
+      idx.push_back(row);
+      cnt.push_back(static_cast<double>(drawn));
+    }
+    remaining -= drawn;
+    remaining_N -= c;
+  }
+}
+
