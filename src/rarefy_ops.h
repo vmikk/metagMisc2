@@ -130,3 +130,87 @@ inline void rarefy_col_hyper(RcppSparse::Matrix& A, int col, int target_depth, i
   }
 }
 
+inline void rarefy_col_hyper(RcppSparse::Matrix& A, int col, int target_depth,
+                             std::vector<int>& idx, std::vector<double>& cnt,
+                             std::mt19937_64& rng) {
+  rarefy_col_hyper(A, col, target_depth, col_sum_rounded(A, col), idx, cnt, rng);
+}
+
+inline void rarefy_col_perm(const PreparedColumn& src, int target_depth, std::vector<int>& idx,
+                            std::vector<double>& cnt, std::vector<int>& pool,
+                            std::mt19937_64& rng) {
+  idx.clear();
+  cnt.clear();
+  pool.clear();
+  if (target_depth <= 0) {
+    return;
+  }
+  for (size_t t = 0; t < src.count.size(); ++t) {
+    const int r = src.row[t];
+    const int64_t c = src.count[t];
+    for (int64_t u = 0; u < c; ++u) {
+      pool.push_back(r);
+    }
+  }
+  if (static_cast<int>(pool.size()) < target_depth) {
+    return;
+  }
+  std::shuffle(pool.begin(), pool.end(), rng);
+  std::sort(pool.begin(), pool.begin() + target_depth);
+  int cur = pool[0];
+  int run = 1;
+  for (int u = 1; u < target_depth; ++u) {
+    if (pool[u] == cur) {
+      ++run;
+    } else {
+      idx.push_back(cur);
+      cnt.push_back(static_cast<double>(run));
+      cur = pool[u];
+      run = 1;
+    }
+  }
+  idx.push_back(cur);
+  cnt.push_back(static_cast<double>(run));
+}
+
+inline void rarefy_col_perm(RcppSparse::Matrix& A, int col, int target_depth,
+                            std::vector<int>& idx, std::vector<double>& cnt,
+                            std::vector<int>& pool, std::mt19937_64& rng) {
+  idx.clear();
+  cnt.clear();
+  pool.clear();
+  if (target_depth <= 0) {
+    return;
+  }
+  int* Ap = A.outerIndexPtr().begin();
+  int* Ai = A.innerIndexPtr().begin();
+  double* Ax = A.nonzeros().begin();
+  const int p0 = Ap[col];
+  const int p1 = Ap[col + 1];
+  for (int t = p0; t < p1; ++t) {
+    const int r = Ai[t];
+    const int c = static_cast<int>(std::llround(Ax[t]));
+    for (int u = 0; u < c; ++u) {
+      pool.push_back(r);
+    }
+  }
+  if (static_cast<int>(pool.size()) < target_depth) {
+    return;
+  }
+  std::shuffle(pool.begin(), pool.end(), rng);
+  std::sort(pool.begin(), pool.begin() + target_depth);
+  int cur = pool[0];
+  int run = 1;
+  for (int u = 1; u < target_depth; ++u) {
+    if (pool[u] == cur) {
+      ++run;
+    } else {
+      idx.push_back(cur);
+      cnt.push_back(static_cast<double>(run));
+      cur = pool[u];
+      run = 1;
+    }
+  }
+  idx.push_back(cur);
+  cnt.push_back(static_cast<double>(run));
+}
