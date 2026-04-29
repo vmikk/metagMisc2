@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <limits>
 
+// Welford online mean/variance + min/max
 struct OnlineStats {
   int64_t n;
   double mean;
