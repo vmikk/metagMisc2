@@ -155,7 +155,13 @@ inline void rarefy_col_perm(const PreparedColumn& src, int target_depth, std::ve
   if (static_cast<int>(pool.size()) < target_depth) {
     return;
   }
-  std::shuffle(pool.begin(), pool.end(), rng);
+  // Partial Fisher-Yates: O(depth) instead of O(N) full shuffle
+  // Selects exactly target_depth elements uniformly without replacement
+  const int sz = static_cast<int>(pool.size());
+  for (int i = 0; i < target_depth; ++i) {
+    std::uniform_int_distribution<int> dist(i, sz - 1);
+    std::swap(pool[i], pool[dist(rng)]);
+  }
   std::sort(pool.begin(), pool.begin() + target_depth);
   int cur = pool[0];
   int run = 1;
@@ -197,7 +203,13 @@ inline void rarefy_col_perm(RcppSparse::Matrix& A, int col, int target_depth,
   if (static_cast<int>(pool.size()) < target_depth) {
     return;
   }
-  std::shuffle(pool.begin(), pool.end(), rng);
+  // Partial Fisher-Yates: O(depth) instead of O(N) full shuffle
+  // Selects exactly target_depth elements uniformly without replacement
+  const int sz = static_cast<int>(pool.size());
+  for (int i = 0; i < target_depth; ++i) {
+    std::uniform_int_distribution<int> dist(i, sz - 1);
+    std::swap(pool[i], pool[dist(rng)]);
+  }
   std::sort(pool.begin(), pool.begin() + target_depth);
   int cur = pool[0];
   int run = 1;
