@@ -121,6 +121,12 @@ Rcpp::List rarefy_alpha_cpp(Rcpp::S4 mat, Rcpp::IntegerVector depths, int n_iter
 #pragma omp parallel for schedule(dynamic)
 #endif
   for (int s = 0; s < ns; ++s) {
+    // R_CheckUserInterrupt is only safe to call from the main R thread
+    // In the non-OpenMP path it IS the main thread; in the OpenMP path we
+    // skip mid-loop checks to avoid undefined behaviour from worker threads
+#ifndef _OPENMP
+    if (s % 64 == 0) Rcpp::checkUserInterrupt();
+#endif
     PreparedColumn prep;
     prepare_col(A, s, prep);
     std::vector<int>    idx;
