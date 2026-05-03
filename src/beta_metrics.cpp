@@ -139,7 +139,7 @@ static void accumulate_branch(UniFracMetricId metric,
   }
 }
 
-static double dist_unifrac(const std::string& metric, const PhyloTree& tree,
+static double dist_unifrac(UniFracMetricId metric, const PhyloTree& tree,
                            const SparseBranchMass& a,
                            const SparseBranchMass& b, double alpha) {
   double num = 0.0, den = 0.0;
