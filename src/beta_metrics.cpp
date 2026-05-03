@@ -251,35 +251,32 @@ static void to_pa_inplace(std::vector<double>& v) {
     if (x > 0.0) x = 1.0;
 }
 
-// Dispatch a single count-based beta metric
-// v1/v2 passed by value only when the metric requires mutation (PA variants, Hellinger)
-// all others receive const refs via the overloads below
-static double dispatch_beta(const std::string&         metric,
+// Dispatch a single count-based beta metric by enum id
+// v1/v2 are copied internally only when the metric requires mutation (PA, Hellinger)
+static double dispatch_beta(BetaMetricId               metric,
                             const std::vector<int>&    i1,
                             const std::vector<double>& v1,
                             const std::vector<int>&    i2,
                             const std::vector<double>& v2) {
-  if (metric == "bray_curtis") {
-    return dist_bray(i1, v1, i2, v2);
-  }
-  if (metric == "bray_curtis_pa") {
-    std::vector<double> c1(v1), c2(v2);
-    to_pa_inplace(c1); to_pa_inplace(c2);
-    return dist_bray(i1, c1, i2, c2);
-  }
-  if (metric == "euclidean") {
-    return dist_euclidean(i1, v1, i2, v2);
-  }
-  if (metric == "hellinger") {
-    return dist_hellinger(i1, v1, i2, v2);  // copies internally
-  }
-  if (metric == "simpson") {
-    return dist_simpson(i1, v1, i2, v2);
-  }
-  if (metric == "simpson_pa") {
-    std::vector<double> c1(v1), c2(v2);
-    to_pa_inplace(c1); to_pa_inplace(c2);
-    return dist_simpson(i1, c1, i2, c2);
+  switch (metric) {
+    case BetaMetricId::bray_curtis:
+      return dist_bray(i1, v1, i2, v2);
+    case BetaMetricId::bray_curtis_pa: {
+      std::vector<double> c1(v1), c2(v2);
+      to_pa_inplace(c1); to_pa_inplace(c2);
+      return dist_bray(i1, c1, i2, c2);
+    }
+    case BetaMetricId::euclidean:
+      return dist_euclidean(i1, v1, i2, v2);
+    case BetaMetricId::hellinger:
+      return dist_hellinger(i1, v1, i2, v2);
+    case BetaMetricId::simpson:
+      return dist_simpson(i1, v1, i2, v2);
+    case BetaMetricId::simpson_pa: {
+      std::vector<double> c1(v1), c2(v2);
+      to_pa_inplace(c1); to_pa_inplace(c2);
+      return dist_simpson(i1, c1, i2, c2);
+    }
   }
   return NA_REAL;
 }
