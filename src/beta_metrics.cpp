@@ -105,7 +105,7 @@ static UniFracMetricId unifrac_metric_id(const std::string& s) {
 // UniFrac distance between two samples' branch-mass vectors
 // ---------------------------------------------------------------------------
 
-static void accumulate_branch(const std::string& metric,
+static void accumulate_branch(UniFracMetricId metric,
                               const std::vector<double>& branch_length,
                               int rank, double p1, double p2, double alpha,
                               double& num, double& den) {
@@ -114,21 +114,28 @@ static void accumulate_branch(const std::string& metric,
   const double psum = p1 + p2;
   if (psum <= 0.0) return;
   const double diff = std::fabs(p1 - p2);
-  if (metric == "unifrac_unweighted") {
-    den += len;
-    if ((p1 > 0.0) != (p2 > 0.0)) num += len;
-  } else if (metric == "unifrac_weighted") {
-    num += len * diff;
-    den += len * psum;
-  } else if (metric == "unifrac_generalized") {
-    const double weight = std::pow(psum, alpha);
-    num += len * weight * diff / psum;
-    den += len * weight;
-  } else if (metric == "unifrac_vaw") {
-    const double eps      = 1e-15;
-    const double variance = std::max(psum - diff * diff, eps);
-    num += len * diff / std::sqrt(variance);
-    den += len * std::sqrt(psum);
+  switch (metric) {
+    case UniFracMetricId::unweighted:
+      den += len;
+      if ((p1 > 0.0) != (p2 > 0.0)) num += len;
+      break;
+    case UniFracMetricId::weighted:
+      num += len * diff;
+      den += len * psum;
+      break;
+    case UniFracMetricId::generalized: {
+      const double weight = std::pow(psum, alpha);
+      num += len * weight * diff / psum;
+      den += len * weight;
+      break;
+    }
+    case UniFracMetricId::vaw: {
+      constexpr double eps = 1e-15;
+      const double variance = std::max(psum - diff * diff, eps);
+      num += len * diff / std::sqrt(variance);
+      den += len * std::sqrt(psum);
+      break;
+    }
   }
 }
 
