@@ -64,6 +64,44 @@ sample_to_branch_masses(const PhyloTree& tree,
 }
 
 // ---------------------------------------------------------------------------
+// Metric enums — resolved once from strings before any inner loops
+// ---------------------------------------------------------------------------
+
+enum class BetaMetricId {
+  bray_curtis,
+  bray_curtis_pa,
+  euclidean,
+  hellinger,
+  simpson,
+  simpson_pa
+};
+
+enum class UniFracMetricId {
+  unweighted,
+  weighted,
+  generalized,
+  vaw
+};
+
+static BetaMetricId beta_metric_id(const std::string& s) {
+  if (s == "bray_curtis")    return BetaMetricId::bray_curtis;
+  if (s == "bray_curtis_pa") return BetaMetricId::bray_curtis_pa;
+  if (s == "euclidean")      return BetaMetricId::euclidean;
+  if (s == "hellinger")      return BetaMetricId::hellinger;
+  if (s == "simpson")        return BetaMetricId::simpson;
+  if (s == "simpson_pa")     return BetaMetricId::simpson_pa;
+  Rcpp::stop("unknown beta metric: " + s);
+}
+
+static UniFracMetricId unifrac_metric_id(const std::string& s) {
+  if (s == "unifrac_unweighted")  return UniFracMetricId::unweighted;
+  if (s == "unifrac_weighted")    return UniFracMetricId::weighted;
+  if (s == "unifrac_generalized") return UniFracMetricId::generalized;
+  if (s == "unifrac_vaw")         return UniFracMetricId::vaw;
+  Rcpp::stop("unknown UniFrac metric: " + s);
+}
+
+// ---------------------------------------------------------------------------
 // UniFrac distance between two samples' branch-mass vectors
 // ---------------------------------------------------------------------------
 
