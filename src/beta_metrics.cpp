@@ -321,28 +321,23 @@ Rcpp::List rarefy_beta_cpp(Rcpp::S4 mat, int depth, int n_iter,
   const int nu = static_cast<int>(unifrac_metrics.size());
   if (nb + nu == 0) Rcpp::stop("at least one metric must be requested");
 
+  // Pre-resolve metric strings to enums once — avoids repeated string
+  // comparisons inside the hot pair × rep inner loops.
+  std::vector<BetaMetricId>    beta_ids(static_cast<size_t>(nb));
+  std::vector<UniFracMetricId> unifrac_ids(static_cast<size_t>(nu));
   for (int m = 0; m < nb; ++m) {
-    const std::string& s = Rcpp::as<std::string>(beta_metrics[m]);
-    if (s != "bray_curtis" && s != "bray_curtis_pa" && s != "euclidean" &&
-        s != "hellinger"   && s != "simpson"        && s != "simpson_pa") {
-      Rcpp::stop("unknown beta metric: " + s);
-    }
+    beta_ids[static_cast<size_t>(m)] =
+        beta_metric_id(Rcpp::as<std::string>(beta_metrics[m]));
   }
+  bool need_alpha = false;
   for (int m = 0; m < nu; ++m) {
-    if (!is_unifrac(Rcpp::as<std::string>(unifrac_metrics[m]))) {
-      Rcpp::stop("unknown UniFrac metric: " +
-                 Rcpp::as<std::string>(unifrac_metrics[m]));
-    }
+    const std::string s = Rcpp::as<std::string>(unifrac_metrics[m]);
+    unifrac_ids[static_cast<size_t>(m)] = unifrac_metric_id(s);
+    if (s == "unifrac_generalized") need_alpha = true;
   }
-  if (nu > 0 && (!std::isfinite(unifrac_alpha) ||
-                  unifrac_alpha < 0.0 || unifrac_alpha > 1.0)) {
-    // Only enforce range when generalized UniFrac is actually requested
-    bool need_alpha = false;
-    for (int m = 0; m < nu; ++m)
-      if (Rcpp::as<std::string>(unifrac_metrics[m]) == "unifrac_generalized")
-        need_alpha = true;
-    if (need_alpha)
-      Rcpp::stop("unifrac_alpha must be in [0,1] for generalized UniFrac");
+  if (need_alpha && (!std::isfinite(unifrac_alpha) ||
+                     unifrac_alpha < 0.0 || unifrac_alpha > 1.0)) {
+    Rcpp::stop("unifrac_alpha must be in [0,1] for generalized UniFrac");
   }
 
   RcppSparse::Matrix A(mat);
@@ -432,13 +427,13 @@ Rcpp::List rarefy_beta_cpp(Rcpp::S4 mat, int depth, int n_iter,
 
       for (int m = 0; m < nb; ++m) {
         const double d = dispatch_beta(
-            Rcpp::as<std::string>(beta_metrics[m]),
+            beta_ids[static_cast<size_t>(m)],
             idc[ci], vvc[ci], idc[cj], vvc[cj]);
         acc_beta[static_cast<size_t>(m)][lin].update(d);
       }
       for (int m = 0; m < nu; ++m) {
         const double d = dist_unifrac(
-            Rcpp::as<std::string>(unifrac_metrics[m]),
+            unifrac_ids[static_cast<size_t>(m)],
             tree, bm[ci], bm[cj], unifrac_alpha);
         acc_unifrac[static_cast<size_t>(m)][lin].update(d);
       }
