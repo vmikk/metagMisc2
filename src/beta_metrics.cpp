@@ -387,6 +387,8 @@ Rcpp::List rarefy_beta_cpp(Rcpp::S4 mat, int depth, int n_iter,
 #endif
 
   for (int rep = 0; rep < n_iter; ++rep) {
+    // The rep loop is serial: safe to check for user interrupts here
+    Rcpp::checkUserInterrupt();
     // Rarefy all columns exactly once for this replicate
     std::vector<std::vector<int>>    idc(static_cast<size_t>(n));
     std::vector<std::vector<double>> vvc(static_cast<size_t>(n));
