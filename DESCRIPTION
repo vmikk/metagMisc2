@@ -14,3 +14,10 @@ Imports:
     Rcpp,
     methods
 LinkingTo: Rcpp
+Suggests:
+    DelayedArray,
+    SparseArray,
+    data.table,
+    phyloseq,
+    SummarizedExperiment,
+    testthat (>= 3.0.0)
