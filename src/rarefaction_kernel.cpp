@@ -251,6 +251,128 @@ Rcpp::List rarefy_alpha_cpp(Rcpp::S4 mat, Rcpp::IntegerVector depths, int n_iter
                              Rcpp::Named("max")  = max_pd));
 }
 
+// Alpha-diversity kernel for a single (non-rarefied) sparse matrix
+//
+// Computes up to 6 count-based metrics and optionally Faith's PD directly
+// from the original column counts (no rarefaction). Each column is read once
+//
+// count_mask : LogicalVector of length 6 — which count metrics to accumulate
+// phylo_mask : LogicalVector of length 1 (faith_pd); pass an empty vector or
+//              a single FALSE if no phylogenetic alpha is needed
+// phylo      : the R phylo List (pass R_NilValue when phylo_mask is empty/FALSE)
+// row_to_tip : integer map from matrix row -> 0-based tip index in the tree
+//              (pass R_NilValue when phylo_mask is empty/FALSE)
+//
+// Returns a named List with two elements:
+//   $count : named list of NumericVector (length = ncols), one per metric
+//   $phylo : named list of NumericVector (length = ncols), one per phylo metric
+//
+// [[Rcpp::export]]
+Rcpp::List sparse_alpha_cpp(Rcpp::S4 mat,
+                             Rcpp::LogicalVector count_mask,
+                             Rcpp::LogicalVector phylo_mask,
+                             Rcpp::RObject phylo,
+                             Rcpp::RObject row_to_tip_obj,
+                             int n_threads) {
+  RcppSparse::Matrix A(mat);
+  const int ns = static_cast<int>(A.cols());
+  if (count_mask.size() != 6) {
+    Rcpp::stop("count_mask must have length 6");
+  }
+
+  const bool want_faith = (phylo_mask.size() >= 1) && (bool)phylo_mask[0];
+  PhyloTree tree;
+  Rcpp::IntegerVector row_to_tip;
+  if (want_faith) {
+    if (phylo.isNULL()) {
+      Rcpp::stop("phylo must be provided when faith_pd is requested");
+    }
+    if (row_to_tip_obj.isNULL()) {
+      Rcpp::stop("row_to_tip must be provided when faith_pd is requested");
+    }
+    tree       = parse_phylo(Rcpp::as<Rcpp::List>(phylo));
+    row_to_tip = Rcpp::as<Rcpp::IntegerVector>(row_to_tip_obj);
+    if (tree.ntips != static_cast<int>(A.rows())) {
+      Rcpp::stop("phy_tree tip count must match the number of matrix rows after pruning");
+    }
+    if (row_to_tip.size() != static_cast<int>(A.rows())) {
+      Rcpp::stop("row_to_tip must have one entry per matrix row");
+    }
+  }
+
+  // Per-metric output vectors (length = ns)
+  std::vector<Rcpp::NumericVector> count_out(6U);
+  for (int m = 0; m < 6; ++m) {
+    if (count_mask[m]) {
+      count_out[static_cast<size_t>(m)] = Rcpp::NumericVector(ns, NA_REAL);
+    }
+  }
+  Rcpp::NumericVector pd_out;
+  if (want_faith) {
+    pd_out = Rcpp::NumericVector(ns, NA_REAL);
+  }
+
+#ifdef _OPENMP
+  if (n_threads > 0) {
+    omp_set_num_threads(n_threads);
+  }
+#pragma omp parallel for schedule(dynamic)
+#endif
+  for (int s = 0; s < ns; ++s) {
+#ifndef _OPENMP
+    if (s % 64 == 0) Rcpp::checkUserInterrupt();
+#endif
+    PreparedColumn prep;
+    prepare_col(A, s, prep);
+    if (prep.total == 0) {
+      continue;  // leave NA_REAL in all output vectors
+    }
+    // convert int64_t counts to double for metric functions
+    std::vector<double> cnt_d(prep.count.size());
+    for (size_t k = 0; k < prep.count.size(); ++k) {
+      cnt_d[k] = static_cast<double>(prep.count[k]);
+    }
+    double alpha_out[6];
+    compute_alpha_metrics(prep.row, cnt_d,
+                          static_cast<double>(prep.total), alpha_out);
+    for (int m = 0; m < 6; ++m) {
+      if (count_mask[m]) {
+        count_out[static_cast<size_t>(m)][s] = alpha_out[m];
+      }
+    }
+    if (want_faith) {
+      pd_out[s] = faith_pd_from_sample(tree, row_to_tip, prep.row);
+    }
+  }
+
+  // Build output lists
+  const Rcpp::CharacterVector cnames =
+      Rcpp::CharacterVector::create("richness", "shannon", "hill1", "hill2",
+                                    "simpson_dom", "evenness");
+  Rcpp::List count_list(6);
+  count_list.attr("names") = Rcpp::clone(cnames);
+  for (int m = 0; m < 6; ++m) {
+    if (count_mask[m]) {
+      count_list[m] = count_out[static_cast<size_t>(m)];
+    } else {
+      count_list[m] = R_NilValue;
+    }
+  }
+
+  const Rcpp::CharacterVector pnames = Rcpp::CharacterVector::create("faith_pd");
+  Rcpp::List phylo_list(1);
+  phylo_list.attr("names") = Rcpp::clone(pnames);
+  if (want_faith) {
+    phylo_list[0] = pd_out;
+  } else {
+    phylo_list[0] = R_NilValue;
+  }
+
+  return Rcpp::List::create(
+      Rcpp::Named("count") = count_list,
+      Rcpp::Named("phylo") = phylo_list);
+}
+
 // [[Rcpp::export]]
 Rcpp::S4 rarefy_single_matrix_cpp(Rcpp::S4 mat, int depth, double seed, int kernel) {
   RcppSparse::Matrix A(mat);
