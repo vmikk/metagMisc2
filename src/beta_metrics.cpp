@@ -468,3 +468,158 @@ Rcpp::List rarefy_beta_cpp(Rcpp::S4 mat, int depth, int n_iter,
   out.attr("names") = out_names;
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// Beta-diversity kernel for a single (non-rarefied) sparse matrix
+// ---------------------------------------------------------------------------
+//
+// Computes pairwise dissimilarities directly from the original column counts
+// (no rarefaction). Column vectors are extracted once and reused for all pairs
+//
+// beta_metrics    : character vector of count-based metrics (may be empty)
+// unifrac_metrics : character vector of UniFrac metrics    (may be empty)
+// phylo           : R phylo List; R_NilValue when unifrac_metrics is empty
+// row_to_tip_obj  : integer map matrix-row -> 0-based tip index; R_NilValue
+//                   when unifrac_metrics is empty
+// unifrac_alpha   : alpha parameter for generalised UniFrac (ignored otherwise)
+//
+// Returns a named Rcpp::List of n x n NumericMatrix, one per requested metric
+//
+// [[Rcpp::export]]
+Rcpp::List sparse_beta_cpp(Rcpp::S4 mat,
+                            Rcpp::CharacterVector beta_metrics,
+                            Rcpp::CharacterVector unifrac_metrics,
+                            Rcpp::RObject phylo,
+                            Rcpp::RObject row_to_tip_obj,
+                            double unifrac_alpha,
+                            int n_threads) {
+  const int nb = static_cast<int>(beta_metrics.size());
+  const int nu = static_cast<int>(unifrac_metrics.size());
+  if (nb + nu == 0) Rcpp::stop("at least one metric must be requested");
+
+  std::vector<BetaMetricId>    beta_ids(static_cast<size_t>(nb));
+  std::vector<UniFracMetricId> unifrac_ids(static_cast<size_t>(nu));
+  for (int m = 0; m < nb; ++m) {
+    beta_ids[static_cast<size_t>(m)] =
+        beta_metric_id(Rcpp::as<std::string>(beta_metrics[m]));
+  }
+  bool need_alpha = false;
+  for (int m = 0; m < nu; ++m) {
+    const std::string s = Rcpp::as<std::string>(unifrac_metrics[m]);
+    unifrac_ids[static_cast<size_t>(m)] = unifrac_metric_id(s);
+    if (s == "unifrac_generalized") need_alpha = true;
+  }
+  if (need_alpha && (!std::isfinite(unifrac_alpha) ||
+                     unifrac_alpha < 0.0 || unifrac_alpha > 1.0)) {
+    Rcpp::stop("unifrac_alpha must be in [0,1] for generalized UniFrac");
+  }
+
+  RcppSparse::Matrix A(mat);
+  const int n = static_cast<int>(A.cols());
+  if (n < 2) Rcpp::stop("need at least two samples for beta diversity");
+
+  PhyloTree           tree;
+  Rcpp::IntegerVector row_to_tip;
+  if (nu > 0) {
+    if (phylo.isNULL())          Rcpp::stop("phylo required for UniFrac metrics");
+    if (row_to_tip_obj.isNULL()) Rcpp::stop("row_to_tip required for UniFrac metrics");
+    tree       = parse_phylo(Rcpp::as<Rcpp::List>(phylo));
+    row_to_tip = Rcpp::as<Rcpp::IntegerVector>(row_to_tip_obj);
+    if (tree.ntips != static_cast<int>(A.rows()))
+      Rcpp::stop("phy_tree tip count must match the number of matrix rows after pruning");
+    if (row_to_tip.size() != static_cast<int>(A.rows()))
+      Rcpp::stop("row_to_tip must have one entry per matrix row");
+  }
+
+  // Extract each column once: rows (indices) and vals (counts)
+  std::vector<std::vector<int>>    idc(static_cast<size_t>(n));
+  std::vector<std::vector<double>> vvc(static_cast<size_t>(n));
+  std::vector<int64_t>             totals(static_cast<size_t>(n), 0);
+  for (int col = 0; col < n; ++col) {
+    PreparedColumn prep;
+    prepare_col(A, col, prep);
+    idc[static_cast<size_t>(col)] = std::move(prep.row);
+    // convert int64_t counts to double for metric functions
+    vvc[static_cast<size_t>(col)].resize(prep.count.size());
+    for (size_t k = 0; k < prep.count.size(); ++k) {
+      vvc[static_cast<size_t>(col)][k] = static_cast<double>(prep.count[k]);
+    }
+    totals[static_cast<size_t>(col)] = prep.total;
+  }
+
+  // Branch masses for UniFrac: normalise by column total -> proportions
+  std::vector<SparseBranchMass> bm;
+  if (nu > 0) {
+    bm.resize(static_cast<size_t>(n));
+    for (int col = 0; col < n; ++col) {
+      const int64_t tot = totals[static_cast<size_t>(col)];
+      if (tot <= 0) {
+        bm[static_cast<size_t>(col)] = SparseBranchMass{};
+        continue;
+      }
+      bm[static_cast<size_t>(col)] = sample_to_branch_masses(
+          tree, row_to_tip,
+          idc[static_cast<size_t>(col)],
+          vvc[static_cast<size_t>(col)],
+          static_cast<int>(tot));
+    }
+  }
+
+  const size_t npairs =
+      static_cast<size_t>(n) * (static_cast<size_t>(n) - 1U) / 2U;
+
+  // Output: one distance matrix per metric — construct each independently
+  // to avoid Rcpp's reference-counted objects aliasing a single allocation
+  std::vector<Rcpp::NumericMatrix> beta_mats;
+  beta_mats.reserve(static_cast<size_t>(nb));
+  for (int m = 0; m < nb; ++m) {
+    beta_mats.emplace_back(n, n);
+    std::fill(beta_mats.back().begin(), beta_mats.back().end(), 0.0);
+  }
+  std::vector<Rcpp::NumericMatrix> uf_mats;
+  uf_mats.reserve(static_cast<size_t>(nu));
+  for (int m = 0; m < nu; ++m) {
+    uf_mats.emplace_back(n, n);
+    std::fill(uf_mats.back().begin(), uf_mats.back().end(), 0.0);
+  }
+
+#ifdef _OPENMP
+  if (n_threads > 0) omp_set_num_threads(n_threads);
+#pragma omp parallel for schedule(dynamic)
+#endif
+  for (size_t lin = 0; lin < npairs; ++lin) {
+#ifndef _OPENMP
+    if (lin % 512 == 0) Rcpp::checkUserInterrupt();
+#endif
+    int i = 0, j = 0;
+    linear_to_pair(n, lin, i, j);
+    const size_t ci = static_cast<size_t>(i);
+    const size_t cj = static_cast<size_t>(j);
+
+    for (int m = 0; m < nb; ++m) {
+      const double d = dispatch_beta(beta_ids[static_cast<size_t>(m)],
+                                     idc[ci], vvc[ci], idc[cj], vvc[cj]);
+      beta_mats[static_cast<size_t>(m)](i, j) = d;
+      beta_mats[static_cast<size_t>(m)](j, i) = d;
+    }
+    for (int m = 0; m < nu; ++m) {
+      const double d = dist_unifrac(unifrac_ids[static_cast<size_t>(m)],
+                                    tree, bm[ci], bm[cj], unifrac_alpha);
+      uf_mats[static_cast<size_t>(m)](i, j) = d;
+      uf_mats[static_cast<size_t>(m)](j, i) = d;
+    }
+  }
+
+  Rcpp::List out(nb + nu);
+  Rcpp::CharacterVector out_names(nb + nu);
+  for (int m = 0; m < nb; ++m) {
+    out[m]       = beta_mats[static_cast<size_t>(m)];
+    out_names[m] = beta_metrics[m];
+  }
+  for (int m = 0; m < nu; ++m) {
+    out[nb + m]       = uf_mats[static_cast<size_t>(m)];
+    out_names[nb + m] = unifrac_metrics[m];
+  }
+  out.attr("names") = out_names;
+  return out;
+}
