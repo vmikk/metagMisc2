@@ -10,6 +10,7 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.4.0)
 Imports:
+    ape,
     Matrix,
     Rcpp,
     methods
