@@ -31,6 +31,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// sparse_beta_cpp
+Rcpp::List sparse_beta_cpp(Rcpp::S4 mat, Rcpp::CharacterVector beta_metrics, Rcpp::CharacterVector unifrac_metrics, Rcpp::RObject phylo, Rcpp::RObject row_to_tip_obj, double unifrac_alpha, int n_threads);
+RcppExport SEXP _metagMisc2_sparse_beta_cpp(SEXP matSEXP, SEXP beta_metricsSEXP, SEXP unifrac_metricsSEXP, SEXP phyloSEXP, SEXP row_to_tip_objSEXP, SEXP unifrac_alphaSEXP, SEXP n_threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::S4 >::type mat(matSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type beta_metrics(beta_metricsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type unifrac_metrics(unifrac_metricsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::RObject >::type phylo(phyloSEXP);
+    Rcpp::traits::input_parameter< Rcpp::RObject >::type row_to_tip_obj(row_to_tip_objSEXP);
+    Rcpp::traits::input_parameter< double >::type unifrac_alpha(unifrac_alphaSEXP);
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(sparse_beta_cpp(mat, beta_metrics, unifrac_metrics, phylo, row_to_tip_obj, unifrac_alpha, n_threads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rarefy_alpha_cpp
 Rcpp::List rarefy_alpha_cpp(Rcpp::S4 mat, Rcpp::IntegerVector depths, int n_iter, Rcpp::LogicalVector count_mask, Rcpp::LogicalVector phylo_mask, Rcpp::RObject phylo, Rcpp::RObject row_to_tip_obj, int n_threads, double seed, int kernel);
 RcppExport SEXP _metagMisc2_rarefy_alpha_cpp(SEXP matSEXP, SEXP depthsSEXP, SEXP n_iterSEXP, SEXP count_maskSEXP, SEXP phylo_maskSEXP, SEXP phyloSEXP, SEXP row_to_tip_objSEXP, SEXP n_threadsSEXP, SEXP seedSEXP, SEXP kernelSEXP) {
@@ -48,6 +65,22 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< int >::type kernel(kernelSEXP);
     rcpp_result_gen = Rcpp::wrap(rarefy_alpha_cpp(mat, depths, n_iter, count_mask, phylo_mask, phylo, row_to_tip_obj, n_threads, seed, kernel));
+    return rcpp_result_gen;
+END_RCPP
+}
+// sparse_alpha_cpp
+Rcpp::List sparse_alpha_cpp(Rcpp::S4 mat, Rcpp::LogicalVector count_mask, Rcpp::LogicalVector phylo_mask, Rcpp::RObject phylo, Rcpp::RObject row_to_tip_obj, int n_threads);
+RcppExport SEXP _metagMisc2_sparse_alpha_cpp(SEXP matSEXP, SEXP count_maskSEXP, SEXP phylo_maskSEXP, SEXP phyloSEXP, SEXP row_to_tip_objSEXP, SEXP n_threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::S4 >::type mat(matSEXP);
+    Rcpp::traits::input_parameter< Rcpp::LogicalVector >::type count_mask(count_maskSEXP);
+    Rcpp::traits::input_parameter< Rcpp::LogicalVector >::type phylo_mask(phylo_maskSEXP);
+    Rcpp::traits::input_parameter< Rcpp::RObject >::type phylo(phyloSEXP);
+    Rcpp::traits::input_parameter< Rcpp::RObject >::type row_to_tip_obj(row_to_tip_objSEXP);
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(sparse_alpha_cpp(mat, count_mask, phylo_mask, phylo, row_to_tip_obj, n_threads));
     return rcpp_result_gen;
 END_RCPP
 }
