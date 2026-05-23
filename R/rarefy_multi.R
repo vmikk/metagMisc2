@@ -18,4 +18,17 @@ rarefy_multi <- function(x,
     as.integer(n_iter),
     as.integer(kernel_code)
   )
+
+## Supported alpha diversity metrics
+.alpha_metric_names <- function() {
+  c(.count_alpha_metric_names(), .phylo_alpha_metric_names())
+}
+
+.count_alpha_metric_names <- function() {
+  c("richness", "shannon", "hill1", "hill2", "simpson_dom", "evenness")
+}
+
+.phylo_alpha_metric_names <- function() {
+  c("faith_pd")
+}
 }
