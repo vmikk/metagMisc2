@@ -6,6 +6,10 @@ rarefy_multi <- function(x,
   samples_are_rows = FALSE) {
   kernel_code <- if (identical(kernel, "hypergeometric")) 0L else 1L
   mat <- as_rarefy_matrix(x, samples_are_rows = samples_are_rows)
+  if (!inherits(mat, "dgCMatrix")) {
+    mat <- methods::as(mat, "dgCMatrix")
+  }
+
   cn <- colnames(mat)
   cs <- Matrix::colSums(mat)
   cn <- colnames(mat)
