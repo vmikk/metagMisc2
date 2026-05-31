@@ -36,6 +36,59 @@ rarefy_multi <- function(x,
   c("faith_pd")
 }
 
+
+.prepare_phylo_tree <- function(phy_tree, taxa, context) {
+  if (is.null(phy_tree)) {
+    stop("phy_tree is required when requesting ", context, call. = FALSE)
+  }
+  if (!inherits(phy_tree, "phylo")) {
+    stop("phy_tree must inherit from class 'phylo'", call. = FALSE)
+  }
+  if (is.null(taxa) || anyNA(taxa) || any(!nzchar(taxa))) {
+    stop("matrix row names are required to match taxa to phy_tree tip labels", call. = FALSE)
+  }
+  if (anyDuplicated(taxa)) {
+    stop("matrix row names must be unique for phylogenetic tree metrics", call. = FALSE)
+  }
+  tips <- phy_tree$tip.label
+  if (is.null(tips) || anyNA(tips) || any(!nzchar(tips))) {
+    stop("phy_tree must contain non-missing tip labels", call. = FALSE)
+  }
+  if (anyDuplicated(tips)) {
+    stop("phy_tree tip labels must be unique", call. = FALSE)
+  }
+  missing_tips <- setdiff(taxa, tips)
+  if (length(missing_tips)) {
+    stop(
+      "phy_tree is missing taxa present in the matrix: ",
+      paste(utils::head(missing_tips, 10L), collapse = ", "),
+      if (length(missing_tips) > 10L) ", ..." else "",
+      call. = FALSE)
+  }
+  extra_tips <- setdiff(tips, taxa)
+  if (length(extra_tips)) {
+    phy_tree <- ape::drop.tip(phy_tree, extra_tips)
+  }
+  if (is.null(phy_tree$edge) || !is.matrix(phy_tree$edge) || ncol(phy_tree$edge) != 2L) {
+    stop("phy_tree$edge must be a two-column matrix", call. = FALSE)
+  }
+  if (is.null(phy_tree$edge.length)) {
+    stop("phy_tree$edge.length is required for UniFrac", call. = FALSE)
+  }
+  if (length(phy_tree$edge.length) != nrow(phy_tree$edge)) {
+    stop("phy_tree$edge.length must have one value per edge", call. = FALSE)
+  }
+  if (anyNA(phy_tree$edge.length) || any(phy_tree$edge.length < 0)) {
+    stop("phy_tree$edge.length must contain non-negative, non-missing values", call. = FALSE)
+  }
+  phy_tree <- ape::reorder.phylo(phy_tree, order = "postorder")
+  row_to_tip <- match(taxa, phy_tree$tip.label) - 1L
+  if (anyNA(row_to_tip)) {
+    stop("failed to align matrix taxa with phy_tree tip labels", call. = FALSE)
+  }
+  list(tree = phy_tree, row_to_tip = row_to_tip)
+}
+
 .alpha_list_to_df <- function(res, sample_names, depths, metrics) {
   ns    <- length(sample_names)
   nd    <- length(depths)
