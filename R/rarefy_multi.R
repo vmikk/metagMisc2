@@ -16,10 +16,38 @@ rarefy_multi <- function(x,
   depths <- as.integer(depth)
   allm   <- .alpha_metric_names()
   countm <- .count_alpha_metric_names()
+  phylom <- .phylo_alpha_metric_names()
+  mch <- match(metrics, allm)
+  count_mask <- rep(FALSE, length(countm))
+  names(count_mask) <- countm
+  count_mask[intersect(metrics, countm)] <- TRUE
+  phylo_mask <- rep(FALSE, length(phylom))
+  names(phylo_mask) <- phylom
+  phylo_mask[intersect(metrics, phylom)] <- TRUE
+
+  ## Prepare the phylo tree once for both phylogenetic 
+  ## alpha metrics (Faith PD) and UniFrac dissimilarities
+  need_tree <- any(phylo_mask) ||
+               (!is.null(dissim) && any(.is_unifrac_metric(dissim)))
+  phylo_tree <- NULL
+  if (need_tree) {
+    phylo_tree <- .prepare_phylo_tree(
+      phy_tree,
+      rownames(mat),
+      context = "phylogenetic metrics")
+  }
+
+  ## Alpha kernel: count metrics + Faith PD in a single rarefaction pass
   res <- rarefy_alpha_cpp(
     mat,
     depths,
     as.integer(n_iter),
+    as.logical(count_mask),
+    as.logical(phylo_mask),
+    if (!is.null(phylo_tree)){ phylo_tree$tree } else { NULL },
+    if (!is.null(phylo_tree)){ as.integer(phylo_tree$row_to_tip) } else { NULL },
+    as.integer(n_threads),
+    as.double(seed),
     as.integer(kernel_code)
   )
 
@@ -36,6 +64,13 @@ rarefy_multi <- function(x,
   c("faith_pd")
 }
 
+.unifrac_metric_names <- function() {
+  c("unifrac_unweighted", "unifrac_weighted", "unifrac_generalized", "unifrac_vaw")
+}
+
+.is_unifrac_metric <- function(x) {
+  x %in% .unifrac_metric_names()
+}
 
 .prepare_phylo_tree <- function(phy_tree, taxa, context) {
   if (is.null(phy_tree)) {
