@@ -50,6 +50,24 @@ rarefy_multi <- function(x,
     as.double(seed),
     as.integer(kernel_code)
   )
+  alpha_parts <- list()
+  if (any(count_mask)) {
+    alpha_parts[[length(alpha_parts) + 1L]] <-
+      .alpha_list_to_df(
+        res$count,
+        sample_names = cn,
+        depths = depths,
+        metrics = names(count_mask)[count_mask])
+  }
+  if (any(phylo_mask)) {
+    alpha_parts[[length(alpha_parts) + 1L]] <-
+      .alpha_list_to_df(
+        res$phylo,
+        sample_names = cn,
+        depths = depths,
+        metrics = names(phylo_mask)[phylo_mask])
+  }
+  alpha_df <- do.call(rbind, alpha_parts)
 
 ## Supported alpha diversity metrics
 .alpha_metric_names <- function() {
