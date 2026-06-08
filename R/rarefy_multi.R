@@ -69,6 +69,36 @@ rarefy_multi <- function(x,
   }
   alpha_df <- do.call(rbind, alpha_parts)
 
+  beta <- NULL
+  if (!is.null(dissim)) {
+    d0           <- depths[1L]
+    beta_only    <- dissim[!.is_unifrac_metric(dissim)]
+    unifrac_only <- dissim[.is_unifrac_metric(dissim)]
+
+    ## Beta kernel: rarefy once per rep;
+    ## compute all metrics in one parallel pair loop
+    beta_mats <- rarefy_beta_cpp(
+      mat,
+      d0,
+      as.integer(n_iter),
+      as.character(beta_only),
+      as.character(unifrac_only),
+      if (!is.null(phylo_tree)) phylo_tree$tree else NULL,
+      if (!is.null(phylo_tree)) as.integer(phylo_tree$row_to_tip) else NULL,
+      as.double(unifrac_alpha),
+      as.integer(n_threads),
+      as.double(seed),
+      as.integer(kernel_code)
+    )
+    ## Reorder output to match the original dissim order and attach names
+    beta <- lapply(dissim, function(dm) {
+      mfull <- beta_mats[[dm]]
+      rownames(mfull) <- cn
+      colnames(mfull) <- cn
+      stats::as.dist(mfull, diag = FALSE, upper = FALSE)
+    })
+    names(beta) <- dissim
+  }
 ## Supported alpha diversity metrics
 .alpha_metric_names <- function() {
   c(.count_alpha_metric_names(), .phylo_alpha_metric_names())
