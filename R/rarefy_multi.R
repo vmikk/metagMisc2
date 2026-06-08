@@ -18,6 +18,9 @@ rarefy_multi <- function(x,
   countm <- .count_alpha_metric_names()
   phylom <- .phylo_alpha_metric_names()
   mch <- match(metrics, allm)
+  if (anyNA(mch)) {
+    stop("Unknown metrics: ", paste(setdiff(metrics, allm), collapse = ", "))
+  }
   count_mask <- rep(FALSE, length(countm))
   names(count_mask) <- countm
   count_mask[intersect(metrics, countm)] <- TRUE
