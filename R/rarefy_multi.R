@@ -34,6 +34,13 @@ rarefy_multi <- function(x,
                (!is.null(dissim) && any(.is_unifrac_metric(dissim)))
   phylo_tree <- NULL
   if (need_tree) {
+    if (!is.null(dissim) && any(.is_unifrac_metric(dissim))) {
+      if (!is.numeric(unifrac_alpha) || length(unifrac_alpha) != 1L ||
+          is.na(unifrac_alpha) || unifrac_alpha < 0 || unifrac_alpha > 1) {
+        stop("unifrac_alpha must be a numeric scalar in the 0-1 range",
+             call. = FALSE)
+      }
+    }
     phylo_tree <- .prepare_phylo_tree(
       phy_tree,
       rownames(mat),
