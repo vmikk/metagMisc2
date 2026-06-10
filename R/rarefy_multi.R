@@ -132,6 +132,23 @@ rarefy_multi <- function(x,
     })
     names(beta) <- dissim
   }
+
+  tables <- NULL
+  if (isTRUE(return_tables)) {
+    nt <- max(1L, as.integer(n_tables))
+    tables <- vector("list", nt)
+    for (ti in seq_len(nt)) {
+      tables[[ti]] <- rarefy_single_matrix_cpp(
+        mat,
+        depths[1L],
+        as.double(seed) + as.double(ti),
+        as.integer(kernel_code)
+      )
+      colnames(tables[[ti]]) <- cn
+      rownames(tables[[ti]]) <- rownames(mat)
+    }
+  }
+
   params <- list(
     min_depth = min_depth,
     depths = depths,
