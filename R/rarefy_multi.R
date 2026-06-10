@@ -1,9 +1,28 @@
 rarefy_multi <- function(x,
   depth     = NULL,
   n_iter    = 100L,
+  min_depth = NULL,
   metrics   = c("richness", "shannon", "hill1", "hill2"),
+  dissim    = NULL,
+  phy_tree  = NULL,
+  unifrac_alpha = 0.5,
+  dissim_mode = c("mean", "per_rep", "subset", "groups"),
+  dissim_block_size = 1e8,
+  store_reps    = FALSE,
+  return_tables = FALSE,
+  n_tables  = 1L,
+  backend   = c("memory", "delayed", "hdf5"),
+  hdf5_file = NULL,
+  n_threads = 1L,
+  seed      = 42,
   kernel    = c("hypergeometric", "permutation"),
   samples_are_rows = FALSE) {
+
+
+  backend <- match.arg(backend)
+  kernel  <- match.arg(kernel)
+  dissim_mode <- match.arg(dissim_mode)
+  
   kernel_code <- if (identical(kernel, "hypergeometric")) 0L else 1L
   mat <- as_rarefy_matrix(x, samples_are_rows = samples_are_rows)
   if (!inherits(mat, "dgCMatrix")) {
@@ -12,6 +31,10 @@ rarefy_multi <- function(x,
 
   cn <- colnames(mat)
   cs <- Matrix::colSums(mat)
+  keep <- cs >= min_depth & cs > 0
+  dropped <- cn[!keep]
+  mat <- mat[, keep, drop = FALSE]
+  cs <- cs[keep]
   cn <- colnames(mat)
   depths <- as.integer(depth)
   allm   <- .alpha_metric_names()
@@ -109,6 +132,26 @@ rarefy_multi <- function(x,
     })
     names(beta) <- dissim
   }
+  params <- list(
+    min_depth = min_depth,
+    depths = depths,
+    n_iter = n_iter,
+    seed = seed,
+    kernel = kernel,
+    backend = backend,
+    dissim_block_size = dissim_block_size)
+
+  res <- structure(
+    list(
+      alpha  = alpha_df,
+      beta   = beta,
+      tables = tables,
+      dropped_samples = dropped,
+      params = params),
+    class = "RarefyResult")
+  return(res)
+}
+
 ## Supported alpha diversity metrics
 .alpha_metric_names <- function() {
   c(.count_alpha_metric_names(), .phylo_alpha_metric_names())
