@@ -31,8 +31,14 @@ rarefy_multi <- function(x,
 
   cn <- colnames(mat)
   cs <- Matrix::colSums(mat)
+  if (is.null(min_depth)) {
+    min_depth <- if (!is.null(depth)) min(depth) else min(cs)
+  }
   keep <- cs >= min_depth & cs > 0
   dropped <- cn[!keep]
+  if (!any(keep)) {
+    stop("No samples remain after min_depth filtering")
+  }
   mat <- mat[, keep, drop = FALSE]
   cs <- cs[keep]
   cn <- colnames(mat)
