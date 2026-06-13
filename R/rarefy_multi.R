@@ -24,6 +24,41 @@ rarefy_multi <- function(x,
   dissim_mode <- match.arg(dissim_mode)
   
   kernel_code <- if (identical(kernel, "hypergeometric")) 0L else 1L
+
+  if (inherits(x, "DelayedMatrix") && identical(backend, "delayed")) {
+    cs <- DelayedArray::colSums(x)
+    if (is.null(min_depth)) {
+      min_depth <- if (!is.null(depth)) min(depth) else min(cs)
+    }
+    keep <- cs >= min_depth & cs > 0
+    if (!any(keep)) {
+      stop("No samples remain after min_depth filtering")
+    }
+    x <- x[, keep, drop = FALSE]
+    cs2 <- DelayedArray::colSums(x)
+    if (is.null(depth)) {
+      depth <- max(1L, floor(0.95 * min(cs2)))
+    }
+    if (any(depth > cs2)) {
+      stop("depth exceeds column sum for at least one retained sample")
+    }
+    return(
+      .block_rarefy_delayed(
+        x,
+        depth     = depth,
+        n_iter    = n_iter,
+        metrics   = metrics,
+        dissim    = NULL,
+        n_threads = n_threads,
+        seed      = seed,
+        kernel    = kernel,
+        min_depth = min_depth,
+        return_tables = return_tables,
+        n_tables = n_tables,
+        samples_are_rows = samples_are_rows)
+      )
+  }
+
   mat <- as_rarefy_matrix(x, samples_are_rows = samples_are_rows)
   if (!inherits(mat, "dgCMatrix")) {
     mat <- methods::as(mat, "dgCMatrix")
@@ -289,4 +324,50 @@ rarefy_multi <- function(x,
     stringsAsFactors = FALSE)
   return(res)
 }
+
+.block_rarefy_delayed <- function(x,
+    depth, n_iter, metrics, dissim, n_threads, seed, kernel,
+    min_depth, return_tables, n_tables, samples_are_rows) {
+
+  if (!requireNamespace("DelayedArray", quietly = TRUE)) {
+    stop("Package 'DelayedArray' is required for backend='delayed'", call. = FALSE)
+  }
+  e <- new.env(parent = emptyenv())
+  e$parts <- list()
+  e$bi <- 1L
+  grid <- DelayedArray::colAutoGrid(x)
+  DelayedArray::blockApply(
+    x,
+    grid,
+    function(block) {
+      mat <- methods::as(block, "dgCMatrix")
+      e$parts[[e$bi]] <- rarefy_multi(
+        mat,
+        depth     = depth,
+        n_iter    = n_iter,
+        metrics   = metrics,
+        dissim    = dissim,
+        backend   = "memory",
+        n_threads = n_threads,
+        seed      = seed,
+        kernel    = kernel,
+        min_depth = min_depth,
+        return_tables = FALSE,
+        samples_are_rows = samples_are_rows)
+      e$bi <- e$bi + 1L
+      NULL
+    },
+    verbose = NA)
+  alpha <- do.call(rbind, lapply(e$parts, `[[`, "alpha"))
+  dropped <- unique(unlist(lapply(e$parts, `[[`, "dropped_samples")))
+  
+  res <- structure(
+    list(
+      alpha  = alpha,
+      beta   = NULL,
+      tables = NULL,
+      dropped_samples = dropped,
+      params = list(blocked = TRUE, backend = "delayed")),
+    class = "RarefyResult")
+  return(res)
 }
