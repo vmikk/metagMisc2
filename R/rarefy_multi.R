@@ -65,6 +65,11 @@ rarefy_multi <- function(x,
   }
 
   cn <- colnames(mat)
+  if (is.null(cn)) {
+    cn <- paste0("Sample", seq_len(ncol(mat)))
+    colnames(mat) <- cn
+  }
+
   cs <- Matrix::colSums(mat)
   if (is.null(min_depth)) {
     min_depth <- if (!is.null(depth)) min(depth) else min(cs)
