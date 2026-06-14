@@ -82,6 +82,10 @@ rarefy_multi <- function(x,
   mat <- mat[, keep, drop = FALSE]
   cs <- cs[keep]
   cn <- colnames(mat)
+
+  if (is.null(depth)) {
+    depth <- max(1L, floor(0.95 * min(cs)))
+  }
   depths <- as.integer(depth)
   allm   <- .alpha_metric_names()
   countm <- .count_alpha_metric_names()
