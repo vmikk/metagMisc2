@@ -11,3 +11,12 @@ print.RarefyResult <- function(x, ...) {
   }
   invisible(x)
 }
+summary.RarefyResult <- function(object, ...) {
+  print(object)
+  if (nrow(object$alpha)) {
+    cat("\nAlpha (head):\n")
+    print(utils::head(object$alpha, 6L))
+  }
+  invisible(object)
+}
+
