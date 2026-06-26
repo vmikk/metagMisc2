@@ -1,3 +1,4 @@
+#' @export
 print.RarefyResult <- function(x, ...) {
   cat("RarefyResult: ", NROW(x$alpha), " alpha rows\n", sep = "")
   if (!is.null(x$beta)) {
@@ -11,6 +12,8 @@ print.RarefyResult <- function(x, ...) {
   }
   invisible(x)
 }
+
+#' @export
 summary.RarefyResult <- function(object, ...) {
   print(object)
   if (nrow(object$alpha)) {
@@ -20,6 +23,7 @@ summary.RarefyResult <- function(object, ...) {
   invisible(object)
 }
 
+#' @export
 as.data.frame.RarefyResult <- function(x, row.names = NULL, optional = FALSE, ...) {
   x$alpha
 }
