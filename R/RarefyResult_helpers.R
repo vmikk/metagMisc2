@@ -20,3 +20,6 @@ summary.RarefyResult <- function(object, ...) {
   invisible(object)
 }
 
+as.data.frame.RarefyResult <- function(x, row.names = NULL, optional = FALSE, ...) {
+  x$alpha
+}
