@@ -113,8 +113,11 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_metagMisc2_rarefy_beta_cpp", (DL_FUNC) &_metagMisc2_rarefy_beta_cpp, 11},
+    {"_metagMisc2_sparse_beta_cpp", (DL_FUNC) &_metagMisc2_sparse_beta_cpp, 7},
     {"_metagMisc2_rarefy_alpha_cpp", (DL_FUNC) &_metagMisc2_rarefy_alpha_cpp, 10},
+    {"_metagMisc2_sparse_alpha_cpp", (DL_FUNC) &_metagMisc2_sparse_alpha_cpp, 6},
     {"_metagMisc2_rarefy_single_matrix_cpp", (DL_FUNC) &_metagMisc2_rarefy_single_matrix_cpp, 4},
+    {"_metagMisc2_sparse_to_long_table_cpp_impl", (DL_FUNC) &_metagMisc2_sparse_to_long_table_cpp_impl, 1},
     {NULL, NULL, 0}
 };
 
