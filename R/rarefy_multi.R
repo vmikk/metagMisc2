@@ -97,6 +97,9 @@ rarefy_multi <- function(x,
   if (anyNA(mch)) {
     stop("Unknown metrics: ", paste(setdiff(metrics, allm), collapse = ", "))
   }
+  if (!length(mch)) {
+    stop("Select at least one metric")
+  }
   count_mask <- rep(FALSE, length(countm))
   names(count_mask) <- countm
   count_mask[intersect(metrics, countm)] <- TRUE
