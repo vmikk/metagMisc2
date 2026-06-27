@@ -23,6 +23,9 @@ rarefy_multi <- function(x,
   kernel  <- match.arg(kernel)
   dissim_mode <- match.arg(dissim_mode)
   
+  if (!identical(dissim_mode, "mean") && !is.null(dissim)) {
+    warning("Only dissim_mode='mean' is implemented; ignoring mode")
+  }
   kernel_code <- if (identical(kernel, "hypergeometric")) 0L else 1L
 
   if (inherits(x, "DelayedMatrix") && identical(backend, "delayed")) {
