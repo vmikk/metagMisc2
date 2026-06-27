@@ -98,6 +98,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// sparse_to_long_table_cpp_impl
+Rcpp::List sparse_to_long_table_cpp_impl(Rcpp::S4 mat);
+RcppExport SEXP _metagMisc2_sparse_to_long_table_cpp_impl(SEXP matSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::S4 >::type mat(matSEXP);
+    rcpp_result_gen = Rcpp::wrap(sparse_to_long_table_cpp_impl(mat));
+    return rcpp_result_gen;
+END_RCPP
+}
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_metagMisc2_rarefy_beta_cpp", (DL_FUNC) &_metagMisc2_rarefy_beta_cpp, 11},
