@@ -1,3 +1,17 @@
+
+#' Alpha diversity of a sparse count matrix
+#'
+#'
+#' @param x Count matrix (taxa in rows, samples in columns).
+#' @param metrics Character vector of alpha-diversity metrics to compute.
+#'   Any subset of \code{c("richness", "shannon", "hill1", "hill2",
+#'   "simpson_dom", "evenness", "faith_pd")}.
+#' @param phy_tree An object of class \code{phylo} (from the \pkg{ape}
+#'   package).  Required when \code{"faith_pd"} is requested.
+#' @param n_threads Positive integer; number of OpenMP threads.
+#' @param samples_are_rows Logical; if \code{TRUE}, the input matrix is
+#'   transposed before processing.  Default \code{FALSE}.
+#' @export
 sparse_div <- function(x,
   metrics          = c("richness", "shannon", "hill1", "hill2"),
   phy_tree         = NULL,
